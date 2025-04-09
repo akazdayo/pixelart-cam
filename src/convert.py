@@ -50,7 +50,6 @@ def kmeans(client, image_id, k=8):
 
 
 def convert(client: httpx.Client, image_id, palette):
-    # print(f"Converting image with ID: {image_id} using palette: {palette}")
     response = client.post(
         "http://localhost:8000/v1/images/convert?image_id=" + image_id,
         data=palette,
@@ -62,7 +61,7 @@ def convert(client: httpx.Client, image_id, palette):
 
 
 def delete(client: httpx.Client, image_id):
-    response = client.get(
+    client.get(
         "http://localhost:8000/v1/images/delete/" + image_id,
         timeout=30.0,
     )
@@ -71,6 +70,25 @@ def delete(client: httpx.Client, image_id):
 def dog(client: httpx.Client, image_id):
     response = client.post(
         "http://localhost:8000/v1/images/convert/dog?image_id=" + image_id,
+        timeout=30.0,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def _set(client: httpx.Client, image_id, value):
+    response = client.post(
+        f"http://localhost:8000/v1/images/set?image_id={image_id}",
+        json={"image_data": value},
+        timeout=30.0,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def get(client: httpx.Client, image_id):
+    response = client.get(
+        "http://localhost:8000/v1/images/" + image_id,
         timeout=30.0,
     )
     response.raise_for_status()

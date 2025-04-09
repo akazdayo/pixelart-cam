@@ -1,15 +1,23 @@
 import cv2
 import numpy as np
 import httpx
-import time
 import convert as convert
 import base64
+from PIL import Image
+from PIL import ImageEnhance
+
+
+def cv_to_base64(img):
+    _, encoded = cv2.imencode(".png", img)
+    img_str = base64.b64encode(encoded).decode("ascii")
+
+    return img_str
 
 
 def decode_base64(b64_img):
     # Data URIからBase64部分を抽出
-    base64_data = b64_img.split(",")[1] if "," in b64_img else b64_img
-    img_bytes = base64.b64decode(base64_data)
+    # base64_data = b64_img.split(",")[1] if "," in b64_img else b64_img
+    img_bytes = base64.b64decode(b64_img)
     image_array = np.asarray(bytearray(img_bytes), dtype=np.uint8)
     image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
     return image
@@ -23,7 +31,15 @@ def grid_mosaic(image, size):
     return small
 
 
-cap = cv2.VideoCapture(0)
+def saturation(image, value):
+    img = Image.fromarray(image)
+    enhancer = ImageEnhance.Color(img)
+    result = enhancer.enhance(value)
+    result = np.array(result)
+    return result
+
+
+cap = cv2.VideoCapture(1)
 # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
@@ -46,18 +62,22 @@ with httpx.Client() as client:
             (9, 9),  # カーネルの縦幅・横幅
             2,  # 横方向の標準偏差（0を指定すると、カーネルサイズから自動計算）
         )
-
-        img = grid_mosaic(img, 256)
+        img = saturation(img, 2)
 
         response = convert.upload(client, img)
         image_id = response.get("image_id") if response else None
-        d_response = convert.dog(client, image_id)
+        convert.dog(client, image_id)
+        img = decode_base64(convert.get(client, image_id)["image"])
+        img = grid_mosaic(img, 256)
+
+        convert._set(client, image_id, cv_to_base64(img))
         # kmeans処理
         k_response = convert.kmeans(client, image_id, k=16)
-        c_response = convert.convert(client, image_id, k_response["cluster"])
+        convert.convert(client, image_id, k_response["cluster"])
+        result = convert.get(client, image_id)
 
         convert.delete(client, image_id)
-        img = decode_base64(c_response["image"])
+        img = decode_base64(result["image"])
         result = cv2.resize(img, frame.shape[:2][::-1], interpolation=cv2.INTER_NEAREST)
         cv2.imshow("Converted Image", result)
 
