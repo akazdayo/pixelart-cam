@@ -76,6 +76,15 @@ def dog(client: httpx.Client, image_id):
     return response.json()
 
 
+def morphology(client: httpx.Client, image_id):
+    response = client.post(
+        "http://localhost:8000/v1/images/convert/morphology?image_id=" + image_id,
+        timeout=30.0,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
 def _set(client: httpx.Client, image_id, value):
     response = client.post(
         f"http://localhost:8000/v1/images/set?image_id={image_id}",

@@ -57,9 +57,10 @@ with httpx.Client() as client:
         if not ret:
             print("カメラからの映像の取得に失敗しました")
             break
+        # img = cv2.medianBlur(frame, 15)
         img = cv2.GaussianBlur(
             frame,  # 入力画像
-            (9, 9),  # カーネルの縦幅・横幅
+            (5, 5),  # カーネルの縦幅・横幅
             2,  # 横方向の標準偏差（0を指定すると、カーネルサイズから自動計算）
         )
         img = saturation(img, 2)
@@ -67,6 +68,7 @@ with httpx.Client() as client:
         response = convert.upload(client, img)
         image_id = response.get("image_id") if response else None
         convert.dog(client, image_id)
+        convert.morphology(client, image_id)
         img = decode_base64(convert.get(client, image_id)["image"])
         img = grid_mosaic(img, 256)
 
